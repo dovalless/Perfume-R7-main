@@ -157,11 +157,12 @@
         </div>
     </div>
 
-    <!-- Modal Registro (Admin) -->
+    <!-- Modal Registro/Edición (Admin) -->
     <div id="product-modal" class="fixed inset-0 z-[120] flex items-center justify-center hidden p-4 bg-black/90">
         <div class="bg-[#0f0f0f] w-full max-w-lg rounded-[40px] p-8 border border-emerald-500/20 shadow-2xl relative">
-            <h3 class="text-2xl font-bold tracking-tight neon-text uppercase mb-8">Nueva Fragancia</h3>
+            <h3 id="modal-title" class="text-2xl font-bold tracking-tight neon-text uppercase mb-8">Nueva Fragancia</h3>
             <form id="perfume-form" onsubmit="saveProduct(event)" class="space-y-6">
+                <input type="hidden" id="p-id">
                 <div id="drop-zone" onclick="document.getElementById('file-input').click()" class="upload-zone h-48 rounded-3xl flex flex-col items-center justify-center cursor-pointer overflow-hidden relative border border-white/5">
                     <div id="preview-text" class="text-center text-gray-500">
                         <svg class="h-8 w-8 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -181,7 +182,7 @@
                 
                 <div class="flex gap-4">
                     <button type="button" onclick="closeModal('product-modal')" class="flex-1 py-4 text-gray-500 text-xs font-bold tracking-widest uppercase">Cancelar</button>
-                    <button type="submit" class="flex-1 btn-emerald py-4 rounded-2xl text-xs uppercase tracking-widest">Publicar</button>
+                    <button type="submit" id="btn-submit" class="flex-1 btn-emerald py-4 rounded-2xl text-xs uppercase tracking-widest">Publicar</button>
                 </div>
             </form>
         </div>
@@ -205,6 +206,7 @@
         let currentAction = ''; 
         let pendingDeleteId = null;
         let currentPurchase = null;
+        let isAdmin = false; // Estado de sesión admin
 
         // Cargar productos al iniciar
         window.onload = fetchProducts;
@@ -224,6 +226,17 @@
 
         // Modales
         function openAccessModal(action, id = null) {
+            if (isAdmin) {
+                // Si ya es admin, ejecutar acción directamente
+                if (action === 'add') openProductModal();
+                else if (action === 'edit') openProductModal(id);
+                else if (action === 'delete') {
+                    pendingDeleteId = id;
+                    if(confirm("¿Seguro que deseas eliminar esta fragancia?")) executeDelete();
+                }
+                return;
+            }
+
             currentAction = action;
             pendingDeleteId = id;
             document.getElementById('password-modal').classList.remove('hidden');
@@ -238,16 +251,39 @@
         function verifyAccess() {
             const pass = document.getElementById('admin-pass').value;
             if (pass === ADMIN_PASS) {
+                isAdmin = true; // Activar sesión admin
                 closeModal('password-modal');
-                if (currentAction === 'add') {
-                    document.getElementById('product-modal').classList.remove('hidden');
-                } else if (currentAction === 'delete') {
-                    executeDelete();
-                }
+                
+                if (currentAction === 'add') openProductModal();
+                else if (currentAction === 'edit') openProductModal(pendingDeleteId);
+                else if (currentAction === 'delete') executeDelete();
+                
+                render(); // Re-renderizar para mostrar botones de edición
             } else {
                 alert("CLAVE INCORRECTA");
                 document.getElementById('admin-pass').value = '';
             }
+        }
+
+        function openProductModal(id = null) {
+            resetForm();
+            if (id) {
+                const p = products.find(prod => prod.id === id);
+                document.getElementById('modal-title').innerText = "Editar Fragancia";
+                document.getElementById('btn-submit').innerText = "Guardar Cambios";
+                document.getElementById('p-id').value = p.id;
+                document.getElementById('p-name').value = p.name;
+                document.getElementById('p-price').value = p.price;
+                document.getElementById('p-stock').value = p.stock;
+                document.getElementById('img-preview').src = p.image;
+                document.getElementById('img-preview').classList.remove('hidden');
+                document.getElementById('preview-text').classList.add('hidden');
+                imageData = p.image;
+            } else {
+                document.getElementById('modal-title').innerText = "Nueva Fragancia";
+                document.getElementById('btn-submit').innerText = "Publicar";
+            }
+            document.getElementById('product-modal').classList.remove('hidden');
         }
 
         // Productos
@@ -268,19 +304,31 @@
             e.preventDefault();
             if(!imageData) return alert("Sube una imagen");
             
-            const newProduct = {
+            const productId = document.getElementById('p-id').value;
+            const productData = {
                 name: document.getElementById('p-name').value.toUpperCase(),
                 price: parseFloat(document.getElementById('p-price').value),
                 stock: parseInt(document.getElementById('p-stock').value),
                 image: imageData
             };
 
-            const { data, error } = await supabaseClient
-                .from('perfumes')
-                .insert([newProduct])
-                .select();
+            let error;
+            if (productId) {
+                // Actualizar existente
+                const result = await supabaseClient
+                    .from('perfumes')
+                    .update(productData)
+                    .eq('id', productId);
+                error = result.error;
+            } else {
+                // Insertar nuevo
+                const result = await supabaseClient
+                    .from('perfumes')
+                    .insert([productData]);
+                error = result.error;
+            }
 
-            if (error) alert("Error al guardar: " + error.message);
+            if (error) alert("Error: " + error.message);
             else {
                 fetchProducts();
                 closeModal('product-modal');
@@ -290,6 +338,7 @@
 
         function resetForm() {
             document.getElementById('perfume-form').reset();
+            document.getElementById('p-id').value = '';
             document.getElementById('img-preview').classList.add('hidden');
             document.getElementById('preview-text').classList.remove('hidden');
             imageData = '';
@@ -373,12 +422,18 @@
                     <div class="h-80 overflow-hidden flex items-center justify-center p-10 bg-white/5 relative">
                         <img src="${p.image}" alt="${p.name}" class="max-h-full max-w-full object-contain transition-transform duration-1000 group-hover:scale-110">
                         ${p.stock <= 0 ? '<div class="absolute inset-0 flex items-center justify-center bg-black/60"><span class="text-red-500 font-bold tracking-[0.3em] uppercase text-xs">Agotado</span></div>' : ''}
+                        
+                        <!-- Botones Admin (Solo visibles si isAdmin es true) -->
+                        <div class="absolute top-4 right-4 flex gap-2 ${isAdmin ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all">
+                            <button onclick="openAccessModal('edit', '${p.id}')" class="bg-black/50 text-emerald-500 hover:text-emerald-400 p-2 rounded-full border border-white/5">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </button>
+                            <button onclick="openAccessModal('delete', '${p.id}')" class="bg-black/50 text-red-500 hover:text-red-400 p-2 rounded-full border border-white/5">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
                     </div>
                     
-                    <button onclick="openAccessModal('delete', '${p.id}')" class="absolute top-4 right-4 bg-black/50 text-red-500/50 hover:text-red-500 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all border border-white/5">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-
                     <div class="p-8">
                         <div class="flex justify-between items-start mb-2">
                             <h3 class="text-xl font-bold tracking-tight text-white uppercase">${p.name}</h3>
