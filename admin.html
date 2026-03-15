@@ -107,20 +107,22 @@
 
             <!-- Products Table -->
             <div class="glass-panel rounded-[40px] overflow-hidden">
-                <table class="w-full text-left">
-                    <thead class="bg-emerald-500/5 border-b border-white/5">
-                        <tr>
-                            <th class="px-8 py-6 text-[10px] uppercase tracking-widest text-emerald-500">Imagen</th>
-                            <th class="px-8 py-6 text-[10px] uppercase tracking-widest text-emerald-500">Fragancia</th>
-                            <th class="px-8 py-6 text-[10px] uppercase tracking-widest text-emerald-500">Precio</th>
-                            <th class="px-8 py-6 text-[10px] uppercase tracking-widest text-emerald-500">Stock</th>
-                            <th class="px-8 py-6 text-[10px] uppercase tracking-widest text-emerald-500 text-right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-product-list" class="divide-y divide-white/5">
-                        <!-- Productos aquí -->
-                    </tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[600px] md:min-w-full">
+                        <thead class="bg-emerald-500/5 border-b border-white/5">
+                            <tr>
+                                <th class="px-4 md:px-8 py-6 text-[10px] uppercase tracking-widest text-emerald-500">Imagen</th>
+                                <th class="px-4 md:px-8 py-6 text-[10px] uppercase tracking-widest text-emerald-500">Fragancia</th>
+                                <th class="px-4 md:px-8 py-6 text-[10px] uppercase tracking-widest text-emerald-500">Precio</th>
+                                <th class="px-4 md:px-8 py-6 text-[10px] uppercase tracking-widest text-emerald-500">Stock</th>
+                                <th class="px-4 md:px-8 py-6 text-[10px] uppercase tracking-widest text-emerald-500 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-product-list" class="divide-y divide-white/5">
+                            <!-- Productos aquí -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </main>
     </div>
@@ -198,20 +200,20 @@
             const list = document.getElementById('admin-product-list');
             list.innerHTML = products.map(p => `
                 <tr class="hover:bg-white/[0.02] transition-colors">
-                    <td class="px-8 py-4">
+                    <td class="px-4 md:px-8 py-4">
                         <img src="${p.image}" class="h-16 w-16 object-contain bg-white/5 rounded-xl">
                     </td>
-                    <td class="px-8 py-4">
-                        <p class="font-bold text-white uppercase">${p.name}</p>
+                    <td class="px-4 md:px-8 py-4">
+                        <p class="font-bold text-white uppercase text-sm md:text-base">${p.name}</p>
                         <p class="text-[10px] text-gray-500 font-mono">ID: ${p.id.split('-')[0]}</p>
                     </td>
-                    <td class="px-8 py-4 text-emerald-500 font-light">$${p.price}</td>
-                    <td class="px-8 py-4">
+                    <td class="px-4 md:px-8 py-4 text-emerald-500 font-light">$${p.price}</td>
+                    <td class="px-4 md:px-8 py-4">
                         <span class="${p.stock <= 0 ? 'text-red-500 font-bold' : 'text-gray-400'}">
                             ${p.stock} Uds.
                         </span>
                     </td>
-                    <td class="px-8 py-4 text-right">
+                    <td class="px-4 md:px-8 py-4 text-right">
                         <div class="flex justify-end gap-3">
                             <button onclick="openProductModal('${p.id}')" class="p-2 hover:bg-emerald-500/20 rounded-lg text-emerald-500 transition-colors">
                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>

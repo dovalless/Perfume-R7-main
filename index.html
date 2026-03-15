@@ -144,8 +144,10 @@
         </div>
     </div>
 
-    <!-- Supabase SDK -->
+    <!-- Supabase SDK, jsPDF and QRCode -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 
     <!-- Script -->
     <script>
@@ -199,9 +201,72 @@
             document.getElementById('invoice-modal').classList.remove('hidden');
         }
 
+        async function generatePDF(invId, date, productName, price) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Estilos
+            doc.setFillColor(15, 15, 15);
+            doc.rect(0, 0, 210, 297, 'F');
+            
+            doc.setTextColor(16, 185, 129); // Emerald
+            doc.setFontSize(24);
+            doc.text("R7 AROMA", 20, 30);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text("SCENT BOUTIQUE & GALLERY", 20, 37);
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(12);
+            doc.text(`ID FACTURA: ${invId}`, 140, 30);
+            doc.text(`FECHA: ${date}`, 140, 37);
+            
+            doc.setDrawColor(16, 185, 129);
+            doc.line(20, 50, 190, 50);
+            
+            doc.setFontSize(14);
+            doc.text("DETALLES DE LA COMPRA", 20, 70);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(150, 150, 150);
+            doc.text("PRODUCTO", 20, 85);
+            doc.text("TOTAL", 160, 85);
+            
+            doc.setFontSize(16);
+            doc.setTextColor(255, 255, 255);
+            doc.text(productName, 20, 95);
+            doc.text(`$${price}`, 160, 95);
+            
+            doc.setDrawColor(40, 40, 40);
+            doc.line(20, 110, 190, 110);
+            
+            // QR Code
+            const qrData = `Factura: ${invId}\nProducto: ${productName}\nTotal: $${price}\nFecha: ${date}`;
+            const qrCanvas = document.createElement('canvas');
+            await QRCode.toCanvas(qrCanvas, qrData, { width: 100, margin: 2 });
+            const qrImageData = qrCanvas.toDataURL('image/png');
+            doc.addImage(qrImageData, 'PNG', 150, 120, 40, 40);
+            
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            doc.text("Escanea para validar tu compra", 150, 165);
+            
+            doc.setFontSize(12);
+            doc.setTextColor(16, 185, 129);
+            doc.text("Gracias por elegir la exclusividad de R7 AROMA", 20, 200);
+            
+            doc.save(`Factura_R7_${invId}.pdf`);
+        }
+
         async function sendToWhatsApp() {
             const date = document.getElementById('inv-date').innerText;
             const invId = document.getElementById('inv-id').innerText;
+            const productName = document.getElementById('inv-name').innerText;
+            const price = document.getElementById('inv-price').innerText.replace('$', '');
+            
+            // Generar PDF
+            await generatePDF(invId, date, productName, price);
             
             // Actualizar stock en Supabase
             if (currentPurchase.stock > 0) {
@@ -217,12 +282,15 @@
                             `--------------------------%0A` +
                             `*ID:* ${invId}%0A` +
                             `*Fecha:* ${date}%0A` +
-                            `*Producto:* ${currentPurchase.name}%0A` +
-                            `*Total:* $${currentPurchase.price}%0A` +
+                            `*Producto:* ${productName}%0A` +
+                            `*Total:* $${price}%0A` +
                             `--------------------------%0A` +
-                            `Hola, quiero confirmar el pedido de este perfume.`;
+                            `He generado mi factura en PDF. La adjunto a continuación.`;
             
-            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
+            setTimeout(() => {
+                window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
+            }, 1000);
+            
             closeModal('invoice-modal');
         }
 
