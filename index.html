@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R7 AROMA | Boutique Elite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Outfit:wght@200;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --emerald: #10b981;
+            --emerald-glow: rgba(16, 185, 129, 0.4);
+            --dark-bg: #050505;
+            --card-bg: #0d0d0d;
+        }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--dark-bg);
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+
+        .font-logo {
+            font-family: 'Syncopate', sans-serif;
+            letter-spacing: 0.3em;
+        }
+
+        .neon-text {
+            color: var(--emerald);
+            text-shadow: 0 0 10px var(--emerald-glow);
+        }
+
+        .neon-border {
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            transition: all 0.4s ease;
+        }
+
+        .neon-border:hover {
+            border-color: var(--emerald);
+            box-shadow: 0 0 20px var(--emerald-glow);
+        }
+
+        .glass-header {
+            background: rgba(5, 5, 5, 0.9);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+        }
+
+        .perfume-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .btn-emerald {
+            background: var(--emerald);
+            color: black;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px var(--emerald-glow);
+        }
+
+        .btn-emerald:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 25px var(--emerald);
+        }
+
+        .upload-zone {
+            border: 2px dashed rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.02);
+        }
+
+        .invoice-bg {
+            background: radial-gradient(circle at top right, #1a1a1a, #000);
+        }
+
+        /* Estilo para el scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: var(--emerald); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <nav class="glass-header sticky top-0 z-50 px-6 py-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex flex-col">
+                <h1 class="font-logo text-xl md:text-2xl font-bold neon-text uppercase">R7 AROMA</h1>
+                <span class="text-[8px] uppercase tracking-[0.6em] text-gray-500 mt-1">Scent Boutique & Gallery</span>
+            </div>
+            
+            <button onclick="openAccessModal('add')" class="text-emerald-500 border border-emerald-500/30 px-4 py-2 rounded-full text-[10px] uppercase tracking-widest hover:bg-emerald-500 hover:text-black transition-all">
+                Panel Admin
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main -->
+    <main class="container mx-auto px-6 py-12 min-h-screen">
+        <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
+            <!-- Los perfumes aparecerán aquí -->
+        </div>
+
+        <div id="empty-state" class="py-32 flex flex-col items-center justify-center border border-emerald-500/10 rounded-[40px] bg-emerald-500/[0.02]">
+            <p class="text-lg font-light text-gray-400">Sin fragancias disponibles actualmente.</p>
+            <p class="text-[10px] uppercase tracking-widest text-emerald-500/50 mt-4">Acceda al panel para cargar inventario</p>
+        </div>
+    </main>
+
+    <!-- Modal de Contraseña -->
+    <div id="password-modal" class="fixed inset-0 z-[100] flex items-center justify-center hidden p-4 bg-black/95 backdrop-blur-xl">
+        <div class="bg-[#0f0f0f] w-full max-w-sm rounded-3xl p-8 border border-emerald-500/30 text-center shadow-2xl">
+            <h3 class="text-xl font-bold neon-text uppercase tracking-widest mb-2">Seguridad R7</h3>
+            <p class="text-gray-500 text-[10px] uppercase tracking-widest mb-6">Confirmación de Identidad</p>
+            <input type="password" id="admin-pass" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-center text-2xl tracking-[0.5em] focus:outline-none focus:border-emerald-500 text-white mb-6" placeholder="******">
+            <div class="flex gap-3">
+                <button onclick="closeModal('password-modal')" class="flex-1 py-3 text-gray-500 uppercase text-[10px] font-bold tracking-widest">Cerrar</button>
+                <button onclick="verifyAccess()" class="flex-1 btn-emerald py-3 rounded-xl uppercase text-[10px] tracking-widest">Entrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Factura -->
+    <div id="invoice-modal" class="fixed inset-0 z-[110] flex items-center justify-center hidden p-4 bg-black/90 backdrop-blur-sm">
+        <div class="bg-[#0f0f0f] w-full max-w-md rounded-3xl overflow-hidden border border-emerald-500/30 shadow-2xl invoice-bg">
+            <div class="p-8">
+                <div class="flex justify-between items-start mb-8">
+                    <div>
+                        <h4 class="font-logo text-emerald-500 text-sm">R7 AROMA</h4>
+                        <p class="text-[8px] text-gray-500 tracking-widest uppercase">Invoice Official</p>
+                    </div>
+                    <div class="text-right">
+                        <p id="inv-date" class="text-[10px] text-gray-400 font-mono"></p>
+                        <p id="inv-id" class="text-[10px] text-emerald-500 font-mono"></p>
+                    </div>
+                </div>
+                
+                <div class="border-y border-white/5 py-6 my-6">
+                    <p class="text-[10px] uppercase tracking-widest text-gray-500 mb-2">Fragancia</p>
+                    <h2 id="inv-name" class="text-2xl font-bold text-white mb-1 tracking-tight"></h2>
+                    <p class="text-gray-400 text-sm italic">Categoría: Exclusive Essence</p>
+                </div>
+
+                <div class="flex justify-between items-center mb-10">
+                    <span class="text-xs uppercase tracking-widest text-gray-500">Total a Pagar</span>
+                    <span id="inv-price" class="text-3xl font-light text-emerald-500"></span>
+                </div>
+
+                <button onclick="sendToWhatsApp()" class="w-full bg-emerald-500 text-black py-4 rounded-xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-3">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                    Confirmar Pedido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Registro (Admin) -->
+    <div id="product-modal" class="fixed inset-0 z-[120] flex items-center justify-center hidden p-4 bg-black/90">
+        <div class="bg-[#0f0f0f] w-full max-w-lg rounded-[40px] p-8 border border-emerald-500/20 shadow-2xl relative">
+            <h3 class="text-2xl font-bold tracking-tight neon-text uppercase mb-8">Nueva Fragancia</h3>
+            <form id="perfume-form" onsubmit="saveProduct(event)" class="space-y-6">
+                <div id="drop-zone" onclick="document.getElementById('file-input').click()" class="upload-zone h-48 rounded-3xl flex flex-col items-center justify-center cursor-pointer overflow-hidden relative border border-white/5">
+                    <div id="preview-text" class="text-center text-gray-500">
+                        <svg class="h-8 w-8 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <p class="text-[10px] uppercase tracking-widest">Subir Imagen</p>
+                    </div>
+                    <img id="img-preview" src="" class="absolute inset-0 w-full h-full object-contain hidden p-6">
+                </div>
+                <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFile(this)">
+                
+                <input required id="p-name" type="text" placeholder="NOMBRE DEL PERFUME" class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-emerald-500 text-white placeholder:text-gray-700">
+                <div class="flex gap-4">
+                    <input required id="p-price" type="number" step="0.01" placeholder="PRECIO ($)" class="flex-1 bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-emerald-500 text-white placeholder:text-gray-700">
+                    <input required id="p-stock" type="number" placeholder="STOCK" class="w-1/3 bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-emerald-500 text-white placeholder:text-gray-700">
+                </div>
+                
+                <div class="flex gap-4">
+                    <button type="button" onclick="closeModal('product-modal')" class="flex-1 py-4 text-gray-500 text-xs font-bold tracking-widest uppercase">Cancelar</button>
+                    <button type="submit" class="flex-1 btn-emerald py-4 rounded-2xl text-xs uppercase tracking-widest">Publicar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Script -->
+    <script>
+        // CONFIGURACIÓN SUPABASE
+        const SUPABASE_URL = "https://esmvrmngmrcdofdckzik.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzbXZybW5nbXJjZG9mZGNremlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MzA0ODEsImV4cCI6MjA4OTEwNjQ4MX0.AeoL588TmcqLQpiAbQorMB-RuwG0t3odrNBaKoMB7PY";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const WHATSAPP_NUMBER = "8294379911";
+        const ADMIN_PASS = "203031";
+        
+        let products = [];
+        let imageData = '';
+        let currentAction = ''; 
+        let pendingDeleteId = null;
+        let currentPurchase = null;
+
+        // Cargar productos al iniciar
+        window.onload = fetchProducts;
+
+        async function fetchProducts() {
+            const { data, error } = await supabaseClient
+                .from('perfumes')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) console.error('Error cargando:', error);
+            else {
+                products = data;
+                render();
+            }
+        }
+
+        // Modales
+        function openAccessModal(action, id = null) {
+            currentAction = action;
+            pendingDeleteId = id;
+            document.getElementById('password-modal').classList.remove('hidden');
+            document.getElementById('admin-pass').focus();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            if(id === 'password-modal') document.getElementById('admin-pass').value = '';
+        }
+
+        function verifyAccess() {
+            const pass = document.getElementById('admin-pass').value;
+            if (pass === ADMIN_PASS) {
+                closeModal('password-modal');
+                if (currentAction === 'add') {
+                    document.getElementById('product-modal').classList.remove('hidden');
+                } else if (currentAction === 'delete') {
+                    executeDelete();
+                }
+            } else {
+                alert("CLAVE INCORRECTA");
+                document.getElementById('admin-pass').value = '';
+            }
+        }
+
+        // Productos
+        function handleFile(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    imageData = e.target.result;
+                    document.getElementById('img-preview').src = e.target.result;
+                    document.getElementById('img-preview').classList.remove('hidden');
+                    document.getElementById('preview-text').classList.add('hidden');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function saveProduct(e) {
+            e.preventDefault();
+            if(!imageData) return alert("Sube una imagen");
+            
+            const newProduct = {
+                name: document.getElementById('p-name').value.toUpperCase(),
+                price: parseFloat(document.getElementById('p-price').value),
+                stock: parseInt(document.getElementById('p-stock').value),
+                image: imageData
+            };
+
+            const { data, error } = await supabaseClient
+                .from('perfumes')
+                .insert([newProduct])
+                .select();
+
+            if (error) alert("Error al guardar: " + error.message);
+            else {
+                fetchProducts();
+                closeModal('product-modal');
+                resetForm();
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('perfume-form').reset();
+            document.getElementById('img-preview').classList.add('hidden');
+            document.getElementById('preview-text').classList.remove('hidden');
+            imageData = '';
+        }
+
+        async function executeDelete() {
+            const { error } = await supabaseClient
+                .from('perfumes')
+                .delete()
+                .eq('id', pendingDeleteId);
+
+            if (error) alert("Error al borrar: " + error.message);
+            else {
+                fetchProducts();
+                pendingDeleteId = null;
+            }
+        }
+
+        // Compras y Facturación
+        function checkout(id) {
+            const product = products.find(p => p.id === id);
+            if (product.stock <= 0) {
+                alert("LO SENTIMOS, ESTA FRAGANCIA ESTÁ AGOTADA");
+                return;
+            }
+            currentPurchase = product;
+            
+            const date = new Date().toLocaleDateString('es-DO');
+            const invId = "#INV-" + Math.floor(Math.random() * 99999);
+            
+            document.getElementById('inv-date').innerText = date;
+            document.getElementById('inv-id').innerText = invId;
+            document.getElementById('inv-name').innerText = product.name;
+            document.getElementById('inv-price').innerText = "$" + product.price;
+            
+            document.getElementById('invoice-modal').classList.remove('hidden');
+        }
+
+        async function sendToWhatsApp() {
+            const date = document.getElementById('inv-date').innerText;
+            const invId = document.getElementById('inv-id').innerText;
+            
+            // Actualizar stock en Supabase
+            if (currentPurchase.stock > 0) {
+                const { error } = await supabaseClient
+                    .from('perfumes')
+                    .update({ stock: currentPurchase.stock - 1 })
+                    .eq('id', currentPurchase.id);
+                
+                if (!error) fetchProducts();
+            }
+
+            const message = `*FACTURA R7 AROMA*%0A` +
+                            `--------------------------%0A` +
+                            `*ID:* ${invId}%0A` +
+                            `*Fecha:* ${date}%0A` +
+                            `*Producto:* ${currentPurchase.name}%0A` +
+                            `*Total:* $${currentPurchase.price}%0A` +
+                            `--------------------------%0A` +
+                            `Hola, quiero confirmar el pedido de este perfume.`;
+            
+            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
+            closeModal('invoice-modal');
+        }
+
+        function render() {
+            const grid = document.getElementById('product-grid');
+            const empty = document.getElementById('empty-state');
+
+            if(products.length === 0) {
+                grid.classList.add('hidden');
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            grid.classList.remove('hidden');
+
+            grid.innerHTML = products.map(p => `
+                <div class="perfume-card neon-border group animate-in fade-in duration-700 ${p.stock <= 0 ? 'opacity-50 grayscale' : ''}">
+                    <div class="h-80 overflow-hidden flex items-center justify-center p-10 bg-white/5 relative">
+                        <img src="${p.image}" alt="${p.name}" class="max-h-full max-w-full object-contain transition-transform duration-1000 group-hover:scale-110">
+                        ${p.stock <= 0 ? '<div class="absolute inset-0 flex items-center justify-center bg-black/60"><span class="text-red-500 font-bold tracking-[0.3em] uppercase text-xs">Agotado</span></div>' : ''}
+                    </div>
+                    
+                    <button onclick="openAccessModal('delete', '${p.id}')" class="absolute top-4 right-4 bg-black/50 text-red-500/50 hover:text-red-500 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all border border-white/5">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+
+                    <div class="p-8">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-bold tracking-tight text-white uppercase">${p.name}</h3>
+                            <span class="text-[10px] text-emerald-500/50 font-mono">STOCK: ${p.stock}</span>
+                        </div>
+                        <p class="text-2xl font-light text-emerald-500 mb-8">$${p.price}</p>
+                        
+                        <button onclick="checkout('${p.id}')" ${p.stock <= 0 ? 'disabled' : ''} class="w-full ${p.stock <= 0 ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'btn-emerald'} py-4 rounded-2xl uppercase tracking-[0.2em] text-[10px] font-bold">
+                            ${p.stock <= 0 ? 'AGOTADO' : 'COMPRAR'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
