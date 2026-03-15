@@ -163,11 +163,13 @@
         window.onload = fetchProducts;
 
         async function fetchProducts() {
+            const empty = document.getElementById('empty-state');
             try {
                 const { data, error } = await supabaseClient
                     .from('perfumes')
                     .select('*')
-                    .order('created_at', { ascending: false });
+                    .order('created_at', { ascending: false })
+                    .limit(20);
 
                 if (error) throw error;
                 
@@ -175,8 +177,13 @@
                 render();
             } catch (err) {
                 console.error('Error cargando productos:', err);
-                // Si hay error, reintentar en 3 segundos
-                setTimeout(fetchProducts, 3000);
+                if (empty) {
+                    empty.innerHTML = `
+                        <p class="text-lg font-light text-red-400 text-center px-6">Error al conectar con la galería. Por favor, verifica tu conexión.</p>
+                        <p class="text-[10px] uppercase tracking-widest text-red-500/50 mt-4">${err.message || 'Error de red'}</p>
+                        <button onclick="fetchProducts()" class="mt-8 px-6 py-2 border border-emerald-500/30 rounded-full text-[10px] uppercase tracking-widest text-emerald-500 hover:bg-emerald-500/10 transition-all">Reintentar</button>
+                    `;
+                }
             }
         }
 
@@ -238,35 +245,46 @@
             const grid = document.getElementById('product-grid');
             const empty = document.getElementById('empty-state');
 
-            if(products.length === 0) {
+            if (!products || products.length === 0) {
                 grid.classList.add('hidden');
                 empty.classList.remove('hidden');
+                empty.innerHTML = `
+                    <p class="text-lg font-light text-gray-400">Sin fragancias disponibles actualmente.</p>
+                    <p class="text-[10px] uppercase tracking-widest text-emerald-500/50 mt-4">Nuestra colección se está renovando</p>
+                `;
                 return;
             }
 
             empty.classList.add('hidden');
             grid.classList.remove('hidden');
 
-            grid.innerHTML = products.map(p => `
-                <div class="perfume-card neon-border group animate-in fade-in duration-700 ${p.stock <= 0 ? 'opacity-50 grayscale' : ''}">
+            grid.innerHTML = products.map(p => {
+                const name = p.name || 'FRAGANCIA SIN NOMBRE';
+                const price = p.price || '0.00';
+                const stock = p.stock || 0;
+                const image = p.image || 'https://via.placeholder.com/400?text=R7+AROMA';
+                const id = p.id || '';
+
+                return `
+                <div class="perfume-card neon-border group animate-in fade-in duration-700 ${stock <= 0 ? 'opacity-50 grayscale' : ''}">
                     <div class="h-80 overflow-hidden flex items-center justify-center p-10 bg-white/5 relative">
-                        <img src="${p.image}" alt="${p.name}" class="max-h-full max-w-full object-contain transition-transform duration-1000 group-hover:scale-110">
-                        ${p.stock <= 0 ? '<div class="absolute inset-0 flex items-center justify-center bg-black/60"><span class="text-red-500 font-bold tracking-[0.3em] uppercase text-xs">Agotado</span></div>' : ''}
+                        <img src="${image}" alt="${name}" class="max-h-full max-w-full object-contain transition-transform duration-1000 group-hover:scale-110" onerror="this.src='https://via.placeholder.com/400?text=Error+Cargando'">
+                        ${stock <= 0 ? '<div class="absolute inset-0 flex items-center justify-center bg-black/60"><span class="text-red-500 font-bold tracking-[0.3em] uppercase text-xs">Agotado</span></div>' : ''}
                     </div>
                     
                     <div class="p-8">
                         <div class="flex justify-between items-start mb-2">
-                            <h3 class="text-xl font-bold tracking-tight text-white uppercase">${p.name}</h3>
-                            <span class="text-[10px] text-emerald-500/50 font-mono">STOCK: ${p.stock}</span>
+                            <h3 class="text-xl font-bold tracking-tight text-white uppercase">${name}</h3>
+                            <span class="text-[10px] text-emerald-500/50 font-mono">STOCK: ${stock}</span>
                         </div>
-                        <p class="text-2xl font-light text-emerald-500 mb-8">$${p.price}</p>
+                        <p class="text-2xl font-light text-emerald-500 mb-8">$${price}</p>
                         
-                        <button onclick="checkout('${p.id}')" ${p.stock <= 0 ? 'disabled' : ''} class="w-full ${p.stock <= 0 ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'btn-emerald'} py-4 rounded-2xl uppercase tracking-[0.2em] text-[10px] font-bold">
-                            ${p.stock <= 0 ? 'AGOTADO' : 'COMPRAR'}
+                        <button onclick="checkout('${id}')" ${stock <= 0 ? 'disabled' : ''} class="w-full ${stock <= 0 ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'btn-emerald'} py-4 rounded-2xl uppercase tracking-[0.2em] text-[10px] font-bold">
+                            ${stock <= 0 ? 'AGOTADO' : 'COMPRAR'}
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
     </script>
 </body>
