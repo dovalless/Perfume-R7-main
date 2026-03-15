@@ -205,24 +205,25 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            // Estilos
-            doc.setFillColor(15, 15, 15);
+            // Estilos de fondo
+            doc.setFillColor(10, 10, 10);
             doc.rect(0, 0, 210, 297, 'F');
             
-            doc.setTextColor(16, 185, 129); // Emerald
-            doc.setFontSize(24);
+            doc.setTextColor(16, 185, 129); // Esmeralda
+            doc.setFontSize(26);
             doc.text("R7 AROMA", 20, 30);
             
-            doc.setFontSize(10);
+            doc.setFontSize(9);
             doc.setTextColor(100, 100, 100);
-            doc.text("SCENT BOUTIQUE & GALLERY", 20, 37);
+            doc.text("SCENT BOUTIQUE & GALLERY", 20, 38);
             
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(12);
+            doc.setFontSize(11);
             doc.text(`ID FACTURA: ${invId}`, 140, 30);
-            doc.text(`FECHA: ${date}`, 140, 37);
+            doc.text(`FECHA: ${date}`, 140, 38);
             
             doc.setDrawColor(16, 185, 129);
+            doc.setLineWidth(0.5);
             doc.line(20, 50, 190, 50);
             
             doc.setFontSize(14);
@@ -230,33 +231,38 @@
             
             doc.setFontSize(10);
             doc.setTextColor(150, 150, 150);
-            doc.text("PRODUCTO", 20, 85);
-            doc.text("TOTAL", 160, 85);
+            doc.text("DESCRIPCIÓN DEL PRODUCTO", 20, 85);
+            doc.text("TOTAL PAGADO", 155, 85);
             
             doc.setFontSize(16);
             doc.setTextColor(255, 255, 255);
-            doc.text(productName, 20, 95);
-            doc.text(`$${price}`, 160, 95);
+            doc.text(productName, 20, 100);
+            doc.text(`$${price}`, 155, 100);
             
             doc.setDrawColor(40, 40, 40);
-            doc.line(20, 110, 190, 110);
+            doc.line(20, 115, 190, 115);
             
-            // QR Code
-            const qrData = `Factura: ${invId}\nProducto: ${productName}\nTotal: $${price}\nFecha: ${date}`;
-            const qrCanvas = document.createElement('canvas');
-            await QRCode.toCanvas(qrCanvas, qrData, { width: 100, margin: 2 });
-            const qrImageData = qrCanvas.toDataURL('image/png');
-            doc.addImage(qrImageData, 'PNG', 150, 120, 40, 40);
-            
-            doc.setFontSize(8);
-            doc.setTextColor(100, 100, 100);
-            doc.text("Escanea para validar tu compra", 150, 165);
+            try {
+                const qrData = `FACTURA: ${invId} | PRODUCTO: ${productName} | TOTAL: $${price} | FECHA: ${date}`;
+                const qrDataUrl = await QRCode.toDataURL(qrData, { 
+                    margin: 1, 
+                    width: 150,
+                    color: { dark: '#10b981', light: '#ffffff' }
+                });
+                doc.addImage(qrDataUrl, 'PNG', 145, 125, 45, 45);
+                doc.setFontSize(8);
+                doc.setTextColor(100, 100, 100);
+                doc.text("VALIDACIÓN QR OFICIAL", 150, 175);
+            } catch (err) {
+                console.error("Error QR:", err);
+            }
             
             doc.setFontSize(12);
             doc.setTextColor(16, 185, 129);
-            doc.text("Gracias por elegir la exclusividad de R7 AROMA", 20, 200);
+            doc.text("Gracias por elegir la exclusividad de R7 AROMA", 20, 220);
             
-            doc.save(`Factura_R7_${invId}.pdf`);
+            // Retornamos el PDF como Blob en lugar de descargarlo
+            return doc.output('blob');
         }
 
         async function sendToWhatsApp() {
@@ -265,33 +271,63 @@
             const productName = document.getElementById('inv-name').innerText;
             const price = document.getElementById('inv-price').innerText.replace('$', '');
             
-            // Generar PDF
-            await generatePDF(invId, date, productName, price);
-            
-            // Actualizar stock en Supabase
-            if (currentPurchase.stock > 0) {
-                const { error } = await supabaseClient
-                    .from('perfumes')
-                    .update({ stock: currentPurchase.stock - 1 })
-                    .eq('id', currentPurchase.id);
-                
-                if (!error) fetchProducts();
-            }
+            // Cambiamos el texto del botón para dar feedback
+            const btn = document.querySelector('#invoice-modal button');
+            const originalText = btn.innerText;
+            btn.innerText = "PROCESANDO...";
+            btn.disabled = true;
 
-            const message = `*FACTURA R7 AROMA*%0A` +
-                            `--------------------------%0A` +
-                            `*ID:* ${invId}%0A` +
-                            `*Fecha:* ${date}%0A` +
-                            `*Producto:* ${productName}%0A` +
-                            `*Total:* $${price}%0A` +
-                            `--------------------------%0A` +
-                            `He generado mi factura en PDF. La adjunto a continuación.`;
-            
-            setTimeout(() => {
+            try {
+                // 1. Generar el PDF como Blob (sin descargar)
+                const pdfBlob = await generatePDF(invId, date, productName, price);
+                const fileName = `factura_${invId.replace('#', '')}_${Date.now()}.pdf`;
+
+                // 2. Subir a Supabase Storage (Bucket: 'facturas')
+                const { data, error: uploadError } = await supabaseClient
+                    .storage
+                    .from('facturas')
+                    .upload(fileName, pdfBlob, { contentType: 'application/pdf' });
+
+                if (uploadError) throw uploadError;
+
+                // 3. Obtener URL pública
+                const { data: { publicUrl } } = supabaseClient
+                    .storage
+                    .from('facturas')
+                    .getPublicUrl(fileName);
+
+                // 4. Actualizar stock
+                if (currentPurchase && currentPurchase.stock > 0) {
+                    await supabaseClient
+                        .from('perfumes')
+                        .update({ stock: currentPurchase.stock - 1 })
+                        .eq('id', currentPurchase.id);
+                    fetchProducts();
+                }
+
+                // 5. Preparar mensaje con el enlace al PDF
+                const message = `*🧾 FACTURA OFICIAL R7 AROMA*%0A` +
+                                `------------------------------------------%0A` +
+                                `*ID:* ${invId}%0A` +
+                                `*Fecha:* ${date}%0A` +
+                                `------------------------------------------%0A` +
+                                `*Producto:* ${productName}%0A` +
+                                `*Total:* $${price}%0A` +
+                                `------------------------------------------%0A` +
+                                `📄 *VER FACTURA PDF:* ${publicUrl}%0A` +
+                                `------------------------------------------%0A` +
+                                `✨ *Nueva compra realizada.*`;
+                
                 window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
-            }, 1000);
-            
-            closeModal('invoice-modal');
+                closeModal('invoice-modal');
+
+            } catch (err) {
+                console.error("Error:", err);
+                alert("Hubo un error al procesar la factura. Asegúrate de que el bucket 'facturas' existe en Supabase y es público.");
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
         }
 
         function render() {
